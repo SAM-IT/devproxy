@@ -7,8 +7,8 @@ services:
   devproxy:
     build: docker/
     ports:
-      - "127.0.0.3:443:443"
-      - "127.0.0.3:4430:4430"
+      - "443:443"
+      - "4430:4430"
     volumes:
       - ./config:/config
       - ./docker/entrypoint.sh:/entrypoint.sh:ro
