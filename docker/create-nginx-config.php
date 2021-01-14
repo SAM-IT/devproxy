@@ -43,6 +43,8 @@ server {
   location / {
       proxy_set_header X-Forwarded-For \$remote_addr;
       proxy_buffer_size 128k;
+      proxy_read_timeout 300;
+      proxy_send_timeout 300;
       proxy_buffers 4 256k;
       proxy_busy_buffers_size 256k;
       proxy_set_header Host \$http_host;
@@ -59,6 +61,10 @@ NGINX;
 
 function create_ssl_certificate(string $name, array $domains)
 {
+    if (empty($name)) {
+        throw new \Exception('Name must not be empty');
+    }
+
     $handle = tmpfile();
     $config = <<<OPENSSL
 [req]
@@ -69,8 +75,6 @@ distinguished_name = dn
 subjectAltName=@alt_names
 
 [dn]
-C = NL
-CN = Example
 
 [alt_names]
 
@@ -89,7 +93,7 @@ OPENSSL;
 
     @mkdir('/tmp/certs', '0777', true);
 
-    $cmd = "openssl req -new -key /config/private.key -subj '/C/NL/CN=$name' -config $configFile | "
+    $cmd = "openssl req -new -key /config/private.key -subj '/CN=$name' -config $configFile | "
         . " openssl x509 -req -CA /config/ca.crt -extfile $configFile -extensions req_ext "
         . "-CAkey /config/private.key -CAcreateserial -days 10 -out /tmp/certs/$name.crt"
         ;

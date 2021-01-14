@@ -6,8 +6,10 @@ networks:
 services:
   devproxy:
     build: docker/
+    restart: unless-stopped
     ports:
       - "127.0.0.3:443:443"
+        #      - "192.168.99.1:443:443"
       - "127.0.0.3:4430:4430"
     volumes:
       - ./config:/config

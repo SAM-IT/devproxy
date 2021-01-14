@@ -27,8 +27,7 @@ distinguished_name = dn
 subjectAltName=@alt_names
 
 [dn]
-C = NL
-CN = Example
+
 [alt_names]
 DNS.1=devproxy.test
 DNS.2=*.test
@@ -40,7 +39,7 @@ echo Creating sample cert
 openssl req \
   -new \
   -key private.key \
-  -subj "/C/NL/CN=devproxy.test" \
+  -subj "/CN=devproxy.test" \
   -config $configFile \
   | openssl x509 -req -CA ca.crt -extfile $configFile -extensions req_ext -CAkey private.key -CAcreateserial -days 10 -out certs/devproxy.crt
 
