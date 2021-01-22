@@ -14,6 +14,7 @@ if [ ! -f ca.crt ]; then
   openssl req -x509 -new -nodes -key private.key -sha256 -days 1024 -out ca.crt -subj "/C=NL/CN=DevProxy"
 fi
 
+cp ca.crt /www
 openssl x509 -in certs/devproxy.crt -text -noout | grep DNS
 nginx &
 sleep 5

@@ -1,18 +1,25 @@
-version: '3.4'
+version: '3.8'
+volumes:
+  config:
 networks:
   devproxy:
     external:
       name: devproxy
 services:
+  dns:
+    build: dnsmasq/
+    ports:
+      - "127.0.0.3:53:53/udp"
   devproxy:
     build: docker/
+    init: true
     restart: unless-stopped
     ports:
       - "127.0.0.3:443:443"
         #      - "192.168.99.1:443:443"
       - "127.0.0.3:4430:4430"
     volumes:
-      - ./config:/config
+      - config:/config
       - ./docker/entrypoint.sh:/entrypoint.sh:ro
       - /var/run/docker.sock:/var/run/docker.sock
     networks:

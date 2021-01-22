@@ -106,6 +106,11 @@ OPENSSL;
 echo "Checking containers\n";
 // Clear old blocks.
 passthru('rm -rf /tmp/nginxblocks');
+
+// Set up default site
+create_ssl_certificate('devproxy', ['devproxy']);
+passthru('mv /etc/nginx/conf.d/default.conf.disabled /etc/nginx/conf.d/defaultsite.conf');
+
 foreach(get_eligible_containers() as $id) {
     $name = get_name($id);
     echo "Creating config for $name ($id)\n";
