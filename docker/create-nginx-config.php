@@ -23,6 +23,11 @@ function get_name(string $container): string
     return trim(shell_exec("docker inspect --format '{{ .Name }}' '$container'"), "\n/");
 }
 
+function get_port(string $container): string
+{
+    return trim(shell_exec("docker inspect --format '{{ index .Config.Labels \"com.awesam.proxy.port\" }}' $container"));
+}
+
 function create_server_block(
     string $container
 ): void {
@@ -31,6 +36,8 @@ function create_server_block(
         return "$hostname.*";
     }, get_domains($container)));
     $ip = get_ip($container);
+    $port = get_port($container);
+    $port = empty($port) ? '' : (':' . $port);
     $name = get_name($container);
     $template = <<<NGINX
 server {
@@ -50,7 +57,7 @@ server {
       proxy_set_header Host \$http_host;
       proxy_set_header X-Forwarded-Port \$server_port;
       proxy_set_header X-Forwarded-Proto "https";
-      proxy_pass http://$ip;
+      proxy_pass http://$ip$port;
   }
 }
 
