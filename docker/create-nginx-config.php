@@ -8,38 +8,48 @@ function get_eligible_containers(): array
     return $ids;
 }
 
-function get_domains(string $container): array
+/**
+ * Get all the needed info from a container in a single call
+ * @param string $container
+ */
+function get_container_info(string $container): array
 {
-    return explode(',', trim(shell_exec("docker inspect --format '{{ index .Config.Labels \"com.awesam.proxy.domains\" }}' $container")));
-}
+    $elements = [
+            'domains' => 'split (index .Config.Labels "com.awesam.proxy.domains") ","',
+            'port' => 'index .Config.Labels "com.awesam.proxy.port"',
+            'ip' => '.NetworkSettings.Networks.devproxy.IPAddress',
+            'name' => 'slice .Name 1'
+    ];
 
-function get_ip(string $container): string
-{
-    return trim(shell_exec("docker inspect --format '{{ .NetworkSettings.Networks.devproxy.IPAddress }}' $container"));
-}
+    $coded = [];
+    foreach($elements as $key => $value) {
+        $coded[] = json_encode($key) . " : {{ json ( $value ) }}";
+    }
+    $format = '{' . implode(",\n", $coded) . '}';
+    $command = "docker inspect --format '$format' $container";
 
-function get_name(string $container): string
-{
-    return trim(shell_exec("docker inspect --format '{{ .Name }}' '$container'"), "\n/");
-}
+    $result = json_decode(shell_exec($command), true);
 
-function get_port(string $container): string
-{
-    return trim(shell_exec("docker inspect --format '{{ index .Config.Labels \"com.awesam.proxy.port\" }}' $container"));
+    $result['port'] = (int) (empty($result['port']) ? 80: $result['port']);
+
+    return $result;
 }
 
 function create_server_block(
-    string $container
+    array $domains,
+    string $name,
+    string $ip,
+    int $port = 80
 ): void {
 
     $serverName = implode(' ', array_map(function($hostname) {
         return "$hostname.*";
-    }, get_domains($container)));
-    $ip = get_ip($container);
-    $port = get_port($container);
-    $port = empty($port) ? '' : (':' . $port);
-    $name = get_name($container);
+    }, $domains));
     $template = <<<NGINX
+upstream $name {
+  server $ip:$port;
+  server localhost:81 backup;
+}
 server {
   listen 443 ssl;
   listen 4430 ssl;
@@ -47,17 +57,19 @@ server {
   ssl_certificate_key /config/private.key;
   server_name $serverName;
   client_max_body_size 20m;
+  
   location / {
       proxy_set_header X-Forwarded-For \$remote_addr;
       proxy_buffer_size 128k;
       proxy_read_timeout 300;
       proxy_send_timeout 300;
+      proxy_connect_timeout 2s;
       proxy_buffers 4 256k;
       proxy_busy_buffers_size 256k;
       proxy_set_header Host \$http_host;
       proxy_set_header X-Forwarded-Port \$server_port;
       proxy_set_header X-Forwarded-Proto "https";
-      proxy_pass http://$ip$port;
+      proxy_pass http://$name;
   }
 }
 
@@ -89,6 +101,7 @@ OPENSSL;
 
     $i = 1;
     foreach($domains as $domain) {
+        $domain = trim($domain);
         $config .= "DNS.$i=$domain.test\n";
         $i++;
         $config .= "DNS.$i=*.$domain.test\n";
@@ -96,8 +109,6 @@ OPENSSL;
     }
     fwrite($handle, $config);
     $configFile = stream_get_meta_data($handle)['uri'];
-    echo file_get_contents($configFile);
-
     @mkdir('/tmp/certs', '0777', true);
 
     $cmd = "openssl req -new -key /config/private.key -subj '/CN=$name' -config $configFile | "
@@ -105,7 +116,10 @@ OPENSSL;
         . "-CAkey /config/private.key -CAcreateserial -days 10 -out /tmp/certs/$name.crt"
         ;
 
-    passthru($cmd);
+    passthru($cmd, $result);
+    if ($result !== 0) {
+        die("Failed to create certificate");
+    }
     
 }
 
@@ -116,23 +130,22 @@ passthru('rm -rf /tmp/nginxblocks');
 
 // Set up default site
 create_ssl_certificate('devproxy', ['devproxy']);
-passthru('mv /etc/nginx/conf.d/default.conf.disabled /etc/nginx/conf.d/defaultsite.conf');
 
 foreach(get_eligible_containers() as $id) {
-    $name = get_name($id);
+    $details = get_container_info($id);
+    $name = $details['name'];
     echo "Creating config for $name ($id)\n";
-    $ip = get_ip($id);
+    $ip = $details['ip'];
     echo "Found IP: $ip\n";
-    $domains = get_domains($id);
+    $domains = $details['domains'];
     echo "Creating SSL config\n";
     create_ssl_certificate($name, $domains);
-    create_server_block($id);
-//    foreach( as $domain) {
-//        echo "Domain: $domain\n";
-//    }
+    create_server_block($domains, $name, $ip, $details['port']);
 }
 
 
 
 // Reload nginx config
-passthru('nginx -s reload');
+if (file_exists('/run/nginx/nginx.pid')) {
+    passthru('nginx -s reload');
+}

@@ -14,10 +14,13 @@ if [ ! -f ca.crt ]; then
   openssl req -x509 -new -nodes -key private.key -sha256 -days 1024 -out ca.crt -subj "/C=NL/CN=DevProxy"
 fi
 
-cp ca.crt /www
-openssl x509 -in certs/devproxy.crt -text -noout | grep DNS
+cp ca.crt /www/ca.crt
+
+echo "Creating initial certificates";
+/create-nginx-config.php > /dev/null 2>&1
 nginx &
-sleep 5
+sleep 1
+pgrep nginx > /dev/null || { echo "Nginx did not start"; cat /var/log/nginx/error.log; exit; }
 /create-nginx-config.php
 echo "Waiting for docker events"
 docker events --filter event=start --format=containerstart &
