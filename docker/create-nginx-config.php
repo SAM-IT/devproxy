@@ -16,6 +16,7 @@ function get_container_info(string $container): array
 {
     $elements = [
             'domains' => 'split (index .Config.Labels "com.awesam.proxy.domains") ","',
+            'tld' => 'index .Config.Labels "com.awesam.proxy.tld"',
             'port' => 'index .Config.Labels "com.awesam.proxy.port"',
             'ip' => '.NetworkSettings.Networks.devproxy.IPAddress',
             'name' => 'slice .Name 1'
@@ -31,7 +32,7 @@ function get_container_info(string $container): array
     $result = json_decode(shell_exec($command), true);
 
     $result['port'] = (int) (empty($result['port']) ? 80: $result['port']);
-
+    $result['tld'] = empty($result['tld']) ? 'test' : $result['tld'];
     return $result;
 }
 
@@ -39,11 +40,12 @@ function create_server_block(
     array $domains,
     string $name,
     string $ip,
-    int $port = 80
+    int $port,
+    string $tld
 ): void {
 
-    $serverName = implode(' ', array_map(function($hostname) {
-        return "$hostname.*";
+    $serverName = implode(' ', array_map(function($hostname) use ($tld) {
+        return "$hostname.{$tld}";
     }, $domains));
     $template = <<<NGINX
 upstream $name {
@@ -140,7 +142,7 @@ foreach(get_eligible_containers() as $id) {
     $domains = $details['domains'];
     echo "Creating SSL config\n";
     create_ssl_certificate($name, $domains);
-    create_server_block($domains, $name, $ip, $details['port']);
+    create_server_block($domains, $name, $ip, $details['port'], $details['tld']);
 }
 
 
