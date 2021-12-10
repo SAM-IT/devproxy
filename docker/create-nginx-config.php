@@ -80,7 +80,7 @@ NGINX;
     file_put_contents("/tmp/nginxblocks/$name.conf", $template);
 }
 
-function create_ssl_certificate(string $name, array $domains)
+function create_ssl_certificate(string $name, array $domains, string $tld)
 {
     if (empty($name)) {
         throw new \Exception('Name must not be empty');
@@ -104,9 +104,9 @@ OPENSSL;
     $i = 1;
     foreach($domains as $domain) {
         $domain = trim($domain);
-        $config .= "DNS.$i=$domain.test\n";
+        $config .= "DNS.$i=$domain.$tld\n";
         $i++;
-        $config .= "DNS.$i=*.$domain.test\n";
+        $config .= "DNS.$i=*.$domain.$tld\n";
         $i++;
     }
     fwrite($handle, $config);
@@ -131,7 +131,7 @@ echo "Checking containers\n";
 passthru('rm -rf /tmp/nginxblocks');
 
 // Set up default site
-create_ssl_certificate('devproxy', ['devproxy']);
+create_ssl_certificate('devproxy', ['devproxy'], 'test');
 
 foreach(get_eligible_containers() as $id) {
     $details = get_container_info($id);
@@ -141,7 +141,7 @@ foreach(get_eligible_containers() as $id) {
     echo "Found IP: $ip\n";
     $domains = $details['domains'];
     echo "Creating SSL config\n";
-    create_ssl_certificate($name, $domains);
+    create_ssl_certificate($name, $domains, $details['tld']);
     create_server_block($domains, $name, $ip, $details['port'], $details['tld']);
 }
 
