@@ -18,6 +18,7 @@ function get_container_info(string $container): array
             'domains' => 'split (index .Config.Labels "com.awesam.proxy.domains") ","',
             'tld' => 'index .Config.Labels "com.awesam.proxy.tld"',
             'port' => 'index .Config.Labels "com.awesam.proxy.port"',
+            'ports' => 'split (index .Config.Labels "com.awesam.proxy.ports") ","',
             'ip' => '.NetworkSettings.Networks.devproxy.IPAddress',
             'name' => 'slice .Name 1'
     ];
@@ -30,8 +31,25 @@ function get_container_info(string $container): array
     $command = "docker inspect --format '$format' $container";
 
     $result = json_decode(shell_exec($command), true);
+    // Filter out empty list
+    $result['ports'] = array_filter($result['ports']);
 
-    $result['port'] = (int) (empty($result['port']) ? 80: $result['port']);
+    if (!empty($result['ports']) && count($result['ports']) != count($result['domains'])) {
+        echo 'If you specify ports, you must specify the same amount as domains.';
+        exit;
+    } elseif (!empty($result['ports']) && !empty($result['port'])) {
+        echo 'Specify port or ports, but not both.';
+        exit;
+    }
+
+    if (empty($result['ports'])) {
+        $port = (int) (empty($result['port']) ? 80: $result['port']);
+        for($i = 0; $i < count($result['domains']); $i++) {
+            $result['ports'][] = $port;
+        }
+        unset($result['port']);
+    }
+
     $result['tld'] = empty($result['tld']) ? 'test' : $result['tld'];
     return $result;
 }
@@ -40,15 +58,15 @@ function create_server_block(
     array $domains,
     string $name,
     string $ip,
-    int $port,
+    array $ports,
     string $tld
 ): void {
-
-    $serverName = implode(' ', array_map(function($hostname) use ($tld) {
-        return "$hostname.{$tld}";
-    }, $domains));
-    $template = <<<NGINX
-upstream $name {
+    foreach ($domains as $key => $domain) {
+        $serverName = $domain . '.' . $tld;
+        $port = $ports[$key];
+        $upstreamName = "${name}_${domain}_{$port}";
+        $template = <<<NGINX
+upstream $upstreamName {
   server $ip:$port;
   server localhost:81 backup;
 }
@@ -71,13 +89,15 @@ server {
       proxy_set_header Host \$http_host;
       proxy_set_header X-Forwarded-Port \$server_port;
       proxy_set_header X-Forwarded-Proto "https";
-      proxy_pass http://$name;
+      proxy_pass http://$upstreamName;
   }
 }
 
 NGINX;
-    @mkdir("/tmp/nginxblocks", "0777", true);
-    file_put_contents("/tmp/nginxblocks/$name.conf", $template);
+
+        @mkdir("/tmp/nginxblocks", "0777", true);
+        file_put_contents("/tmp/nginxblocks/{$upstreamName}.conf", $template);
+    }
 }
 
 function create_ssl_certificate(string $name, array $domains, string $tld)
@@ -122,7 +142,6 @@ OPENSSL;
     if ($result !== 0) {
         die("Failed to create certificate");
     }
-    
 }
 
 
@@ -141,11 +160,10 @@ foreach(get_eligible_containers() as $id) {
     echo "Found IP: $ip\n";
     $domains = $details['domains'];
     echo "Creating SSL config\n";
+    echo "--" . json_encode($details);
     create_ssl_certificate($name, $domains, $details['tld']);
-    create_server_block($domains, $name, $ip, $details['port'], $details['tld']);
+    create_server_block($domains, $name, $ip, $details['ports'], $details['tld']);
 }
-
-
 
 // Reload nginx config
 if (file_exists('/run/nginx/nginx.pid')) {
