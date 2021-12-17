@@ -160,7 +160,6 @@ foreach(get_eligible_containers() as $id) {
     echo "Found IP: $ip\n";
     $domains = $details['domains'];
     echo "Creating SSL config\n";
-    echo "--" . json_encode($details);
     create_ssl_certificate($name, $domains, $details['tld']);
     create_server_block($domains, $name, $ip, $details['ports'], $details['tld']);
 }
