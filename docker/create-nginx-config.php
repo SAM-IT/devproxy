@@ -87,6 +87,8 @@ server {
       proxy_buffers 4 256k;
       proxy_busy_buffers_size 256k;
       proxy_set_header Host \$http_host;
+      proxy_set_header Upgrade \$http_upgrade;
+      proxy_set_header Connection "Upgrade";
       proxy_set_header X-Forwarded-Port \$server_port;
       proxy_set_header X-Forwarded-Proto "https";
       proxy_pass http://$upstreamName;
