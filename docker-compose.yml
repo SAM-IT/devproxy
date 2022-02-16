@@ -6,10 +6,6 @@ networks:
     external:
       name: devproxy
 services:
-  dns:
-    build: dnsmasq/
-    ports:
-      - "127.0.0.3:53:53/udp"
   devproxy:
     build: docker/
     init: true
