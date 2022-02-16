@@ -3,8 +3,7 @@ volumes:
   config:
 networks:
   devproxy:
-    external:
-      name: devproxy
+    name: devproxy
 services:
   devproxy:
     build: docker/
