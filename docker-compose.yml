@@ -1,17 +1,78 @@
-version: '3.8'
-volumes:
-  config:
+version: "3.8"
 networks:
-  devproxy:
-    name: devproxy
+  devproxy2:
+    external: true
+
+volumes:
+  stepca-data:
 services:
-  devproxy:
-    build: docker/
-    init: true
+  traefik:
+    image: traefik
+    restart: unless-stopped
+    environment:
+      LEGO_CA_CERTIFICATES: /certs/root_ca.crt
+    command:
+        - "--configfile=/storage/static.yml"
+    volumes:
+      - ./traefik:/storage
+      - ./ca-generated/certs:/certs:ro
+    networks:
+      devproxy2:
+      default:
+    depends_on:
+      - dockerproxy
+      - dnsmasq
+      - step-ca
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.devproxy.test`)"
+  step-ca:
+    build: ./docker/stepca
     restart: unless-stopped
     volumes:
-      - config:/config
-      - ./docker/entrypoint.sh:/entrypoint.sh:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      - "stepca-data:/home/step"
+      - "./ca-config:/home/step/config:ro"
     networks:
-      - devproxy
+      devproxy2:
+  bootstrap:
+    build: ./docker/stepca
+    volumes:
+      - "stepca-data:/home/step"
+      - "./ca-config:/home/step/config:ro"
+    entrypoint: ["/bootstrap.sh"]
+    networks:
+      devproxy2:
+  dockerproxy:
+    restart: unless-stopped
+    image: tecnativa/docker-socket-proxy
+    networks:
+      - default
+    # Set this to true if you get errors due to SELinux/AppArmor
+    privileged: false
+    environment:
+      CONTAINERS: 1
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  whoami:
+    image: containous/whoami:latest
+    hostname: "whoami1"
+    networks:
+      devproxy2:
+    labels:
+      traefik.enable: "true"
+      # Use devDomain as a simple shorthand, the line below will create the rule Host(`whoami.devproxy.test`)
+      devDomain: whoami.devproxy
+      # Use any traefik config to create custom rules instead
+      # traefik.http.routers.whoami.rule: Host(`whoami.devproxy.test`)
+  dnsmasq:
+    build: ./docker/dnsmasq
+    restart: unless-stopped
+    networks:
+      devproxy2:
+    ports:
+    #expose on port 5300 in ca
+      - "127.0.0.1:53535:53"
+      - "127.0.0.1:53535:53/udp"

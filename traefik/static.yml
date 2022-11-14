@@ -1,0 +1,32 @@
+api:
+  insecure: true
+  dashboard: true
+providers:
+  docker:
+    exposedByDefault: false
+    endpoint: tpc://dockerproxy:2375
+    network: devproxy2
+    defaultRule: "Host(`{{ index .Labels \"devDomain\"}}.test`)"
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: stepca
+certificatesResolvers:
+  stepca:
+    acme:
+      storage: /storage/acme.json
+      email: dummy
+      caServer: https://step-ca/acme/dev/directory
+      httpChallenge:
+        entryPoint: web
+log: true
+        # - "--providers.file.filename=/dynamic-conf.yml"
+        #- "--providers.file.watch=true"
+        #- "--accesslog=false"
+        #- "--log=true"
+        # - "--log.level=DEBUG"
+

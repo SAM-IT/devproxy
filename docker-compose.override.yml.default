@@ -1,5 +1,0 @@
-version: '3.8'
-services:
-  devproxy:
-    ports:
-      - "127.0.0.3:443:443"
