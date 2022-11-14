@@ -21,8 +21,7 @@ certificatesResolvers:
       storage: /storage/acme.json
       email: dummy
       caServer: https://step-ca/acme/dev/directory
-      httpChallenge:
-        entryPoint: web
+      tlsChallenge: true
 log: true
         # - "--providers.file.filename=/dynamic-conf.yml"
         #- "--providers.file.watch=true"

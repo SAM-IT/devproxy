@@ -10,12 +10,12 @@ services:
     image: traefik
     restart: unless-stopped
     environment:
-      LEGO_CA_CERTIFICATES: /stepa-data/certs/root_ca.crt
+      LEGO_CA_CERTIFICATES: /stepca-data/certs/root_ca.crt
     command:
         - "--configfile=/storage/static.yml"
     volumes:
       - ./traefik:/storage
-      - stepca-data:/stepa-data:ro
+      - stepca-data:/stepca-data:ro
     networks:
       devproxy2:
       default:
