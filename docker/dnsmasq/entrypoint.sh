@@ -7,4 +7,4 @@ while [[ -z "$TRAEFIK" ]]; do
     sleep 3
 done
 
-exec dnsmasq --address /.test/$TRAEFIK -d
+exec dnsmasq --address /.test/$TRAEFIK -d --no-hosts --domain-needed --no-resolv --local /.test/
