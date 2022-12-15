@@ -5,17 +5,14 @@ networks:
 
 volumes:
   stepca-data:
+  traefik-certs:
 services:
   traefik:
-    image: traefik
+    build: ./docker/traefik
     restart: unless-stopped
-    environment:
-      LEGO_CA_CERTIFICATES: /stepca-data/certs/root_ca.crt
-    command:
-        - "--configfile=/storage/static.yml"
     volumes:
-      - ./traefik:/storage
       - stepca-data:/stepca-data:ro
+      - traefik-certs:/traefik-certs
     networks:
       devproxy2:
       default:

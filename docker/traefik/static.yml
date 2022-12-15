@@ -18,7 +18,7 @@ entryPoints:
 certificatesResolvers:
   stepca:
     acme:
-      storage: /storage/acme.json
+      storage: /traefik-certs/acme.json
       email: dummy
       caServer: https://step-ca/acme/dev/directory
       tlsChallenge: true
