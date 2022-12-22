@@ -7,15 +7,15 @@ This is a default configuration that will:
 
 Set up steps:
 1. Clone this repo
-2. Run `docker-compose run --rm bootstrap`
-3. Create the network for devproxy: `docker network create devproxy2`
+2. Create the network for devproxy: `docker network create devproxy2`
+3. Run `docker-compose run --rm bootstrap`
 4. Run `docker-compose up -d traefik` it will automatically be restarted on boot
-4. `sudo curl -k "https://$(docker inspect $(docker compose ps -q step-ca) | jq '.[0].NetworkSettings.Networks.devproxy2.IPAddress' -r):443/roots.pem" -o /usr/local/share/ca-certificates/devproxyv2.crt`
-5. `sudo update-ca-certificates`
-6. Install the generated CA certificate in your browser (it's located in `/usr/local/share/ca-certificates/devproxyv2.crt`)
-7. Configure DNS
-8. Your CLI should now support the certificate: `curl https://traefik.devproxy.test` should show **Moved permanently**
-9. Go to `https://traefik.devproxy.test` and you should see the container working.
+5. `docker compose cp step-ca:/home/step/certs/root_ca.crt /usr/local/share/ca-certificates/devproxyv2.crt`
+6. `sudo update-ca-certificates`
+7. Install the generated CA certificate in your browser (it's located in `/usr/local/share/ca-certificates/devproxyv2.crt`)
+8. Configure DNS
+9. Your CLI should now support the certificate: `curl https://traefik.devproxy.test` should show **Moved permanently**
+10. Go to `https://traefik.devproxy.test` and you should see the container working.
 
 
 ## Configuring DNS
