@@ -7,9 +7,16 @@ providers:
     endpoint: tpc://dockerproxy:2375
     network: devproxy2
     defaultRule: "Host(`{{ index .Labels \"devDomain\"}}.test`)"
+http:
+
 entryPoints:
   web:
     address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          permanent: false
   websecure:
     address: ":443"
     http:
@@ -21,7 +28,10 @@ certificatesResolvers:
       storage: /traefik-certs/acme.json
       email: dummy
       caServer: https://step-ca/acme/dev/directory
-      tlsChallenge: true
+      dnsChallenge:
+        provider: httpreq
+        delayBeforeCheck: 0
+        disablepropagationcheck: true
 log: true
         # - "--providers.file.filename=/dynamic-conf.yml"
         #- "--providers.file.watch=true"

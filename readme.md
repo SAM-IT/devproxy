@@ -9,7 +9,7 @@ Set up steps:
 1. Clone this repo
 2. Create the network for devproxy: `docker network create devproxy2`
 3. Run `docker-compose run --rm bootstrap`
-4. Run `docker-compose up -d traefik` it will automatically be restarted on boot
+4. Run `docker-compose up --pull -d traefik` it will automatically be restarted on boot
 5. `docker compose cp step-ca:/home/step/certs/root_ca.crt /usr/local/share/ca-certificates/devproxyv2.crt`
 6. `sudo update-ca-certificates`
 7. Install the generated CA certificate in your browser (it's located in `/usr/local/share/ca-certificates/devproxyv2.crt`)

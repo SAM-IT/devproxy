@@ -1,0 +1,23 @@
+{
+    "name": "sam-it/dns",
+    "description": "DNS Messages",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "SamIt\\Dns\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Sam Mousa",
+            "email": "sam@mousa.nl"
+        }
+    ],
+    "require-dev": {
+        "react/datagram": "^1.9"
+    },
+    "require": {
+        "react/http": "^1.8"
+    }
+}

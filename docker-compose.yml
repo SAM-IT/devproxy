@@ -7,6 +7,11 @@ volumes:
   stepca-data:
   traefik-certs:
 services:
+  dnsserve:
+    build: ./docker/dnsserve
+    init: true
+    networks:
+      devproxy2:
   traefik:
     build: ./docker/traefik
     restart: unless-stopped
@@ -19,6 +24,7 @@ services:
     depends_on:
       - dockerproxy
       - dnsmasq
+      - dnsserve
       - step-ca
     labels:
       - "traefik.enable=true"
@@ -27,11 +33,14 @@ services:
   step-ca:
     build: ./docker/stepca
     restart: unless-stopped
+    depends_on:
+      - dnsserve
     volumes:
       - "stepca-data:/home/step"
       - "./ca-config:/home/step/config:ro"
     networks:
       devproxy2:
+
   bootstrap:
     build: ./docker/stepca
     volumes:
@@ -64,6 +73,18 @@ services:
       devDomain: whoami.devproxy
       # Use any traefik config to create custom rules instead
       # traefik.http.routers.whoami.rule: Host(`whoami.devproxy.test`)
+  whoami-wildcard:
+    image: containous/whoami:latest
+    hostname: "whoami1"
+    networks:
+      devproxy2:
+    labels:
+      #this is a wildcard domain example
+      traefik.enable: "true"
+      traefik.http.routers.whoami-wildcard.rule: HostRegexp(`{.*}.whoami.devproxy.test`, `whoami.devproxy.test`)
+      traefik.http.routers.whoami-wildcard.tls.certresolver: "stepca"
+      traefik.http.routers.whoami-wildcard.tls.domains[0].main: "whoami.devproxy.test"
+      traefik.http.routers.whoami-wildcard.tls.domains[0].sans: "*.whoami.devproxy.test"
   dnsmasq:
     build: ./docker/dnsmasq
     restart: unless-stopped
