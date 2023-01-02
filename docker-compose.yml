@@ -8,6 +8,7 @@ volumes:
   traefik-certs:
 services:
   dnsserve:
+    restart: unless-stopped
     build: ./docker/dnsserve
     init: true
     networks:
