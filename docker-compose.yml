@@ -44,6 +44,8 @@ services:
 
   bootstrap:
     build: ./docker/stepca
+    depends_on:
+      - dnsserve
     volumes:
       - "stepca-data:/home/step"
       - "./ca-config:/home/step/config:ro"
