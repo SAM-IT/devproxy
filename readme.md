@@ -41,5 +41,13 @@ Because bridge networks are accessible from the host we do not need to expose an
 
 Note that if your system is not using dnsmasq you might have to activate that first. For Ubuntu check out this tutorial: https://anto.online/guides/how-to-enable-and-disable-systemd-resolved-on-ubuntu/
 
+If your system is using `systemd-resolved`, such as a recent version of Ubuntu, then you need to add the following section to `/etc/systemd/resolved.conf`:
+```code
+  [Resolve]
+  DNS=127.0.0.1:53535
+  FallbackDNS=8.8.8.8 8.8.4.4
+```
+And afterwards run `sudo systemctl restart systemd-resolved`
+
 ## Configuring routing on windows
 On Linux most things work out of the box, on Windows additional magic will be needed. You'll probably want to create a `docker-compose.override.yml` that exposes the Traefik container ports on localhost; Docker Desktop should then make that available to you from windows as well.
